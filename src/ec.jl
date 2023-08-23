@@ -78,8 +78,6 @@ function generate_random_population(n::Integer)
 end
 
 # Selection
-#
-# 
 
 """
   Select at most n of all the strings in the population
@@ -124,23 +122,30 @@ Crossover between multiple bitstrings
 """
 
 # Need a sliding window here and to account for both even and odd populations
+# TODO: IMPROVE
 function cross!(p::Population)
   sliding_windows = windows(p.pop, 2, step=2)
 
-  return nothing
+  r = Vector{Bitstring}(undef, p.size)
+
+  for (p1, p2) in sliding_windows
+    a = cross(p1, p2)
+    push!(r, a)
+    push!(r, a)
+  end
+
+  p = Population(r, p.size)
 end
 
-function cross!(lhs::Bitstring, rhs::Bitstring; split::Float16=0.5)
-
+function cross(lhs::Bitstring, rhs::Bitstring; split::Float16=0.5)
   new_s::Integer = length(lhs) * split
 
+  # FIXME: THis is not concatting to strings 
   return Bitstring(join(lhs.data[1:new_s], rhs.data[new_s:length(rhs)]))
 end
 
 
-
 # Fitness
-
 f(x::Bitstring) = ones(x)
 
 
@@ -148,29 +153,34 @@ f(x::Bitstring) = ones(x)
 evaluate_population(p::Population)::Bool = all(c -> f(c) > FINTESS_TARGET for c in p.pop)
 
 
-
 function print_statistics(p::Population, gen::Integer)
   print("Found solution in $(gen) generations.\nPopulation with size: $(p.size) where first element is $(p.pop[1])")
 end
 
 
-
 function main()
   n = 1000
 
+  # INIT
   population = generate_random_population(n)
   curr_gen = 1
 
   found_ideal_generation = false
 
-
   while curr_gen < MAX_GENERATIONS
+    # Evaluation based on fitness
     if evaluate_population(population)
       found_ideal_generation = true
       break
     end
 
+    # Selection
+    deterministic_select!(population, n)
+
+    # Crossover
     cross!(population)
+
+    # Mutation
     mutate!(population)
 
     curr_gen += 1
@@ -185,13 +195,11 @@ function main()
 end
 
 function test_main()
-
   pop = generate_random_population(6)
 
   println(pop)
 
   deterministic_select!(pop, 2)
-
 end
 
 Random.seed!(42)
