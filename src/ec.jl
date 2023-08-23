@@ -125,13 +125,9 @@ Crossover between multiple bitstrings
 
 # Need a sliding window here and to account for both even and odd populations
 function cross!(p::Population)
-
   sliding_windows = windows(p.pop, 2, step=2)
 
-
   return nothing
-
-
 end
 
 function cross!(lhs::Bitstring, rhs::Bitstring; split::Float16=0.5)
