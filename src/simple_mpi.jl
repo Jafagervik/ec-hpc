@@ -1,3 +1,6 @@
+# using MPI
+
+using Base.Threads
 using Plots
 
 const POPULATION_SIZE = 60
@@ -43,7 +46,8 @@ function main()
   ys::Vector{Float64} = []
 
   while !found
-    sort!(population, by=x -> x.fitness)
+    # TODO: Parallel sort?
+    @time sort!(population, by=x -> x.fitness)
 
     append!(ys, population[1].fitness)
 
@@ -58,7 +62,7 @@ function main()
     append!(new_generation, population[1:s])
     s = Int((1.0 - tresh) * POPULATION_SIZE)
 
-    for _ in 1:s
+    @threads for _ in 1:s
       parent1 = rand(population[1:Int(POPULATION_SIZE / 2)])
       parent2 = rand(population[1:Int(POPULATION_SIZE / 2)])
       child = mate(parent1, parent2)
@@ -77,6 +81,7 @@ function main()
   println("Good enough: Gen: $generation\tX: $(population[1].gene)\tFitness: $(population[1].fitness)")
 
   saveplot(xs, ys)
+
 end
 
 main()
