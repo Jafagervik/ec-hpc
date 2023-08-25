@@ -5,13 +5,14 @@ Bitstrings, genetic algorithms and such thngs
 import Base.show
 using Base.Threads
 using IterTools
+using Plots
 using Random
 using Test
 
 # Constants
-const POP_SIZE = 1000
-const FITNESS_TARGET = 100
-const MAX_GENERATIONS = 1000
+const POP_SIZE = 30
+const FITNESS_TARGET = 7 # Or size of bit vector
+const MAX_GENERATIONS = 30
 
 
 mutable struct Bitstring
@@ -24,7 +25,7 @@ end
 
 function show(io::IO, bs::Bitstring)
   for c in bs.data
-    print(c ? '1' : '0', " ")
+    print(c ? '1' : '0', "  ")
   end
 end
 
@@ -78,8 +79,10 @@ function generate_random_population(n::Integer)
 end
 
 # Mutation - Alpha is the small amount of people that should not be mutated
-function mutate!(p::Population; alpha=0.01)
-  idxs = randperm(1, FITNESS_TARGET)[1:POP_SIZE*alpha]
+function mutate!(p::Population, alpha=0.1)
+  idxs = randperm(FITNESS_TARGET)[1:Int(floor(POP_SIZE * alpha))]
+
+  #@show idxs
   for i in idxs
     mutate!(p, p.pop[i])
   end
@@ -96,21 +99,27 @@ Crossover between multiple bitstrings
 """
     cross two parents two create two children and add them two pop 
 """
-function cross!(p::Population, i; split::Float16=0.5)
-  half = Integer(FITNESS_TARGET * split)
+function cross!(p::Population, i::Integer; split=0.5)
+  half = Int(floor(FITNESS_TARGET * split))
 
-  c1 = Bitstring(join(p.pop[i].data[1:half]) * join(p.pop[i+1].data[half+1]))
-  c2 = Bitstring(join(p.pop[i+1].data[1:half]) * join(p.pop[i].data[half+1]))
+  a = join([b ? "1" : "0" for b in p.pop[i].data[1:half]])
+  b = join([b ? "1" : "0" for b in p.pop[i+1].data[half+1:FITNESS_TARGET]])
 
-  append!(p.pop, c1)
-  append!(p.pop, c2)
+  c = join([b ? "1" : "0" for b in p.pop[i+1].data[1:half]])
+  d = join([b ? "1" : "0" for b in p.pop[i].data[half+1:FITNESS_TARGET]])
+
+  c1 = Bitstring(a * b)
+  c2 = Bitstring(c * d)
+
+  push!(p.pop, c1)
+  push!(p.pop, c2)
 
   return nothing
 end
 
 
 # Fitness
-f(x::Bitstring) = ones(x)
+f(l::Bitstring, r::Bitstring) = ones(l) > ones(r)
 
 # Eval - the best solution has all ones
 evaluate_population(p::Population)::Bool = ones(p.pop[1]) == FITNESS_TARGET
@@ -120,19 +129,17 @@ function print_statistics(p::Population, gen::Integer)
   print("Found solution in $(gen) generations.\nPopulation with size: $(p.size) where first element is $(p.pop[1])")
 end
 
-#function plotstats(xs, ys; title="test")
-#  plot(xs, ys)
-#
-#  xaxis!()
-#  yaxis!()
-#  title!()
-#
-#  savefig("$(title).pdf")
-#end
+function plotstats(xs, ys; title="test")
+  plot(xs, ys, name=title)
+
+  xaxis!()
+  yaxis!()
+
+  savefig("$(title).pdf")
+end
 
 
 function main()
-
   # INIT
   population = generate_random_population(POP_SIZE)
   curr_gen = 1
@@ -145,27 +152,29 @@ function main()
 
   while curr_gen < MAX_GENERATIONS
     # Evaluation based on fitness
-    let best = evaluate_population(population)
+    best = evaluate_population(population)
 
-      # Add best value to ys
-    append!(ys, FITNESS_TARGET - best)
+    # Add best value to ys
+    append!(ys, FITNESS_TARGET - ones(population.pop[1]))
 
-    if best 
+    if best
       found_ideal_generation = true
       break
     end
+
+    # TODO: Add better selection here
 
     # Crossover - cross parents to create children
     for i = 1:2:POP_SIZE
       cross!(population, i)
     end
 
-    # Mutation
-    mutate!(population, alpha=0.2)
+    # Mutation, an alpha percent of the population, children or not,
+    # gets mutated through a virus
+    mutate!(population, 0.02)
 
-    # SELECTION
-    sort!(population.pop, p -> ones(p))
-    population.pop[end:-1:1]
+    # SELECTION, sort in descending order
+    sort!(population.pop, by=x -> ones(x), rev=true)
     population.pop = population.pop[1:POP_SIZE]
 
     curr_gen += 1
@@ -174,10 +183,11 @@ function main()
 
   if found_ideal_generation
     print_statistics(population, curr_gen)
-    #plotstats(1:curr_gen, ys)
-  else
-    print("Better luck next time.")
+    plotstats(1:curr_gen, ys)
+    return nothing
   end
+
+  print("Better luck next time.")
 end
 
 main()
