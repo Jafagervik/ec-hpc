@@ -10,9 +10,11 @@ using Random
 using Test
 
 # Constants
-const POP_SIZE = 30
-const FITNESS_TARGET = 7 # Or size of bit vector
-const MAX_GENERATIONS = 30
+const POP_SIZE = 50
+const FITNESS_TARGET = 1000 # Or size of bit vector
+const MAX_GENERATIONS = 100000
+
+const DEBUG = true
 
 
 mutable struct Bitstring
@@ -47,7 +49,8 @@ function flip_all!(bs::Bitstring)
 end
 
 function flip_random_n!(bs::Bitstring, n::Integer)
-  idxs = randperm(1, FITNESS_TARGET)[1:n]
+  idxs = randperm(FITNESS_TARGET)[1:n]
+
   for i in idxs
     flip_at!(bs, i)
   end
@@ -80,11 +83,13 @@ end
 
 # Mutation - Alpha is the small amount of people that should not be mutated
 function mutate!(p::Population, alpha=0.1)
-  idxs = randperm(FITNESS_TARGET)[1:Int(floor(POP_SIZE * alpha))]
+  # bstomutate = rand(1:POP_SIZE, Int(ceil(POP_SIZE * alpha)))
 
-  #@show idxs
-  for i in idxs
-    mutate!(p, p.pop[i])
+  # Random distinct members of population
+  individuals_to_mutate = randperm(POP_SIZE)[1:Int(ceil(POP_SIZE * alpha))]
+
+  for i in individuals_to_mutate
+    mutate!(p.pop[i])
   end
 end
 
@@ -118,9 +123,6 @@ function cross!(p::Population, i::Integer; split=0.5)
 end
 
 
-# Fitness
-f(l::Bitstring, r::Bitstring) = ones(l) > ones(r)
-
 # Eval - the best solution has all ones
 evaluate_population(p::Population)::Bool = ones(p.pop[1]) == FITNESS_TARGET
 
@@ -130,7 +132,7 @@ function print_statistics(p::Population, gen::Integer)
 end
 
 function plotstats(xs, ys; title="test")
-  plot(xs, ys, name=title)
+  plot!(xs, ys, title=title, xlabel="Gen", ylabel="D away from all ones")
 
   xaxis!()
   yaxis!()
@@ -147,7 +149,7 @@ function main()
   found_ideal_generation = false
 
   # Amount of ones
-  ys::Vector{Float64} = []
+  ys::Vector{Int64} = []
 
 
   while curr_gen < MAX_GENERATIONS
@@ -175,7 +177,13 @@ function main()
 
     # SELECTION, sort in descending order
     sort!(population.pop, by=x -> ones(x), rev=true)
+
+    # Always only keep the best ones for next gen
     population.pop = population.pop[1:POP_SIZE]
+
+    if DEBUG
+      println("Gen: $(curr_gen) - Away: $(ys[curr_gen]) ", population.pop[1])
+    end
 
     curr_gen += 1
   end
@@ -190,4 +198,5 @@ function main()
   print("Better luck next time.")
 end
 
+Random.seed!(42)
 main()
