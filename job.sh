@@ -1,2 +1,4 @@
+#!/usr/bin/bash
+
 # RUN MPI
-mpiexecjl --project=./ -n 4 ./src/ec_hpc.jl
+mpiexecjl --project=./ -n 4 julia ./src/mpitest.jl
