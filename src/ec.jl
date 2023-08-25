@@ -51,7 +51,7 @@ end
 function flip_random_n!(bs::Bitstring, n::Integer)
   idxs = randperm(FITNESS_TARGET)[1:n]
 
-  for i in idxs
+  @threads for i in idxs
     flip_at!(bs, i)
   end
 end
@@ -102,7 +102,7 @@ Crossover between multiple bitstrings
 """
 
 """
-    cross two parents two create two children and add them two pop 
+    cross two parents two create two children and add them to pop 
 """
 function cross!(p::Population, i::Integer; split=0.5)
   half = Int(floor(FITNESS_TARGET * split))
@@ -148,7 +148,7 @@ function main()
 
   found_ideal_generation = false
 
-  # Amount of ones
+  # Amount of zeros 
   ys::Vector{Int64} = []
 
 
@@ -157,7 +157,7 @@ function main()
     best = evaluate_population(population)
 
     # Add best value to ys
-    append!(ys, FITNESS_TARGET - ones(population.pop[1]))
+    append!(ys, zeros(population.pop[1]))
 
     if best
       found_ideal_generation = true
@@ -176,7 +176,7 @@ function main()
     mutate!(population, 0.02)
 
     # SELECTION, sort in descending order
-    sort!(population.pop, by=x -> ones(x), rev=true)
+    sort!(population.pop, by=x -> zeros(x))
 
     # Always only keep the best ones for next gen
     population.pop = population.pop[1:POP_SIZE]
@@ -199,4 +199,11 @@ function main()
 end
 
 Random.seed!(42)
-main()
+@time main()
+
+## NOTES
+
+# TODO: Parallel tournament selector
+# TODO: Create children in their own array and only mutate these
+# TODO: Sorting could be done in parallel?
+# TODO: Parallel Mutation
